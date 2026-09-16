@@ -255,11 +255,11 @@
 <div class="wrap">
   <header class="title">
     <h1>조 뽑 기</h1>
-    <p class="subtitle">23명을 6개 조로 나눕니다</p>
+    <p class="subtitle">25명을 5개 조로 나눕니다</p>
   </header>
 
   <section class="roster">
-    <h2 class="section-title">학생 명단 <span class="pill">총 23명</span></h2>
+    <h2 class="section-title">학생 명단 <span class="pill">총 25명</span></h2>
     <div class="roster-grid" id="rosterGrid"></div>
   </section>
 
@@ -275,29 +275,32 @@
   const STUDENTS = [
     { n:1,  name:'고세현', g:'남', y:24, dept:'일사' },
     { n:2,  name:'김대영', g:'남', y:22, dept:'일사' },
-    { n:3,  name:'김재희', g:'여', y:23, dept:'교육' },
-    { n:4,  name:'김주은', g:'여', y:24, dept:'한문' },
-    { n:5,  name:'김주혜', g:'여', y:24, dept:'일사' },
-    { n:6,  name:'김지형', g:'남', y:22, dept:'일사' },
-    { n:7,  name:'김하진', g:'여', y:24, dept:'일사' },
-    { n:8,  name:'김하현', g:'여', y:24, dept:'일사' },
-    { n:9,  name:'박선재', g:'남', y:24, dept:'일사' },
-    { n:10, name:'박효진', g:'여', y:24, dept:'교육' },
-    { n:11, name:'배성지', g:'여', y:23, dept:'일사' },
-    { n:12, name:'서의현', g:'남', y:24, dept:'일사' },
-    { n:13, name:'심예은', g:'여', y:24, dept:'일사' },
-    { n:14, name:'오창현', g:'남', y:22, dept:'일사' },
-    { n:15, name:'이가현', g:'여', y:23, dept:'일사' },
-    { n:16, name:'이승섭', g:'남', y:22, dept:'일사' },
-    { n:17, name:'이재혁', g:'남', y:22, dept:'윤리' },
-    { n:18, name:'이정현', g:'남', y:22, dept:'일사' },
-    { n:19, name:'이지현', g:'여', y:24, dept:'일사' },
-    { n:20, name:'이해진', g:'여', y:24, dept:'일사' },
-    { n:21, name:'이현서', g:'여', y:24, dept:'일사' },
-    { n:22, name:'최정현', g:'남', y:22, dept:'일사' },
-    { n:23, name:'홍민하', g:'남', y:22, dept:'일사' },
+    { n:3,  name:'김민서', g:'여', y:23, dept:'일사' },
+    { n:4,  name:'김재희', g:'여', y:23, dept:'교육' },
+    { n:5,  name:'김주은', g:'여', y:24, dept:'일사' },
+    { n:6,  name:'김주혜', g:'여', y:24, dept:'한문' },
+    { n:7,  name:'김지형', g:'남', y:22, dept:'일사' },
+    { n:8,  name:'김하진', g:'여', y:24, dept:'일사' },
+    { n:9,  name:'김하현', g:'여', y:24, dept:'일사' },
+    { n:10, name:'박선재', g:'남', y:24, dept:'일사' },
+    { n:11, name:'박효진', g:'여', y:24, dept:'교육' },
+    { n:12, name:'배성지', g:'여', y:23, dept:'일사' },
+    { n:13, name:'서의현', g:'남', y:24, dept:'일사' },
+    { n:14, name:'심예은', g:'여', y:24, dept:'일사' },
+    { n:15, name:'오창현', g:'남', y:22, dept:'일사' },
+    { n:16, name:'이가현', g:'여', y:23, dept:'일사' },
+    { n:17, name:'이승섭', g:'남', y:22, dept:'일사' },
+    { n:18, name:'이재혁', g:'남', y:22, dept:'윤리' },
+    { n:19, name:'이정현', g:'남', y:22, dept:'일사' },
+    { n:20, name:'이지현', g:'여', y:24, dept:'일사' },
+    { n:21, name:'이해진', g:'여', y:24, dept:'일사' },
+    { n:22, name:'이현서', g:'여', y:24, dept:'일사' },
+    { n:23, name:'최인선', g:'여', y:23, dept:'한문' },
+    { n:24, name:'최정현', g:'남', y:22, dept:'일사' },
+    { n:25, name:'홍민하', g:'남', y:22, dept:'일사' },
   ];
-  const GROUP_SIZES = [4, 4, 4, 4, 4, 3];
+  const GROUP_SIZES = [5, 5, 5, 5, 5];
+  const NUM_GROUPS = GROUP_SIZES.length;
 
   const rosterGrid = document.getElementById('rosterGrid');
   STUDENTS.forEach(s => {
@@ -324,14 +327,16 @@
     for (let attempt = 0; attempt < 4000; attempt++) {
       const sNon = shuffle(nonIlsa);
       const sIl  = shuffle(ilsa);
-      const groups = [[], [], [], [], [], []];
-      const order = shuffle([0,1,2,3,4,5]);
-      for (let i = 0; i < 4; i++) groups[order[i]].push(sNon[i]);
+      const groups = Array.from({ length: NUM_GROUPS }, () => []);
+      const order = shuffle(groups.map((_, i) => i));
+      const seed = Math.min(sNon.length, NUM_GROUPS);
+      for (let i = 0; i < seed; i++) groups[order[i]].push(sNon[i]);
+      for (let i = seed; i < sNon.length; i++) sIl.push(sNon[i]);
 
       let ok = true;
       for (const s of sIl) {
         const cands = [];
-        for (let g = 0; g < 6; g++) if (groups[g].length < GROUP_SIZES[g]) cands.push(g);
+        for (let g = 0; g < NUM_GROUPS; g++) if (groups[g].length < GROUP_SIZES[g]) cands.push(g);
         if (cands.length === 0) { ok = false; break; }
         const pick = cands[Math.floor(Math.random() * cands.length)];
         groups[pick].push(s);
@@ -349,9 +354,9 @@
     }
 
     const all = shuffle(STUDENTS);
-    const groups = [[], [], [], [], [], []];
+    const groups = Array.from({ length: NUM_GROUPS }, () => []);
     let idx = 0;
-    for (let g = 0; g < 6; g++) {
+    for (let g = 0; g < NUM_GROUPS; g++) {
       for (let k = 0; k < GROUP_SIZES[g]; k++) groups[g].push(all[idx++]);
     }
     return groups;
