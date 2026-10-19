@@ -24,6 +24,9 @@
     --g4-bg: #f0e3c0; --g4-ink: #5d4a1e; --g4-bd: #d8c79b;
     --g5-bg: #d9d2e6; --g5-ink: #3e3358; --g5-bd: #bcb1d0;
     --g6-bg: #ecd5c2; --g6-ink: #5d3d24; --g6-bd: #d4b69d;
+    --g7-bg: #cfe4e1; --g7-ink: #24504b; --g7-bd: #abcbc6;
+    --g8-bg: #e9d3e3; --g8-ink: #563050; --g8-bd: #d2b2c9;
+    --g9-bg: #dcdfc9; --g9-ink: #44482a; --g9-bd: #c1c6a6;
   }
 
   * { box-sizing: border-box; }
@@ -119,6 +122,92 @@
     color: var(--ink);
     letter-spacing: 0.3px;
   }
+  .stu { cursor: pointer; position: relative; }
+  .stu:hover { box-shadow: var(--shadow-soft); }
+  .stu.excluded {
+    background: transparent;
+    border-style: dashed;
+    opacity: 0.45;
+  }
+  .stu.excluded .name { text-decoration: line-through; font-weight: 400; }
+  .stu.excluded::after {
+    content: '제외';
+    position: absolute;
+    top: 5px; right: 6px;
+    font-size: 10px;
+    color: var(--ink-soft);
+  }
+  .locked .stu { cursor: default; }
+  .roster-hint {
+    font-size: 12px;
+    color: var(--ink-soft);
+    margin: 12px 0 0;
+  }
+  .roster-hint button {
+    font-family: inherit;
+    font-size: 12px;
+    color: var(--ink-soft);
+    background: none;
+    border: none;
+    padding: 0;
+    margin-left: 8px;
+    text-decoration: underline;
+    cursor: pointer;
+  }
+
+  /* 조별 최대 인원 */
+  section.settings {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 10px 14px;
+    margin: 24px 0 0;
+  }
+  .settings .label {
+    font-family: 'Gowun Batang', serif;
+    font-weight: 700;
+    font-size: 15px;
+    letter-spacing: 0.5px;
+  }
+  .size-opts {
+    display: inline-flex;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 3px;
+    box-shadow: var(--shadow-soft);
+  }
+  .size-opts button {
+    font-family: inherit;
+    font-size: 15px;
+    color: var(--ink-soft);
+    background: none;
+    border: none;
+    border-radius: 999px;
+    padding: 7px 16px;
+    cursor: pointer;
+  }
+  .size-opts button[aria-pressed="true"] {
+    background: #6f5c7a;
+    color: #fff;
+  }
+  .size-opts button:disabled { cursor: not-allowed; }
+  .plan {
+    font-size: 14px;
+    color: var(--ink-soft);
+    flex-basis: 100%;
+    text-align: center;
+  }
+
+  .excluded-note {
+    grid-column: 1 / -1;
+    font-size: 13px;
+    color: var(--ink-soft);
+    text-align: center;
+    margin-top: 4px;
+  }
+
   .stu.shaking {
     animation: sway 350ms ease-in-out infinite;
   }
@@ -244,6 +333,15 @@
   .group-6 { background: var(--g6-bg); border-color: var(--g6-bd); }
   .group-6 h2, .group-6 .count, .group-6 .member { color: var(--g6-ink); }
 
+  .group-7 { background: var(--g7-bg); border-color: var(--g7-bd); }
+  .group-7 h2, .group-7 .count, .group-7 .member { color: var(--g7-ink); }
+
+  .group-8 { background: var(--g8-bg); border-color: var(--g8-bd); }
+  .group-8 h2, .group-8 .count, .group-8 .member { color: var(--g8-ink); }
+
+  .group-9 { background: var(--g9-bg); border-color: var(--g9-bd); }
+  .group-9 h2, .group-9 .count, .group-9 .member { color: var(--g9-ink); }
+
   @media (max-width: 540px) {
     h1 { font-size: 26px; }
     button.draw-btn { font-size: 15px; padding: 13px 32px; }
@@ -255,12 +353,24 @@
 <div class="wrap">
   <header class="title">
     <h1>조 뽑 기</h1>
-    <p class="subtitle">25명을 5개 조로 나눕니다</p>
+    <p class="subtitle" id="subtitle"></p>
   </header>
 
   <section class="roster">
-    <h2 class="section-title">학생 명단 <span class="pill">총 25명</span></h2>
+    <h2 class="section-title">학생 명단 <span class="pill" id="countPill"></span></h2>
     <div class="roster-grid" id="rosterGrid"></div>
+    <p class="roster-hint">이름을 누르면 조 편성에서 제외됩니다. 다시 누르면 포함됩니다.<button type="button" id="resetExcl" hidden>모두 포함</button></p>
+  </section>
+
+  <section class="settings">
+    <span class="label">조별 최대 인원</span>
+    <div class="size-opts" id="sizeOpts" role="group" aria-label="조별 최대 인원">
+      <button type="button" data-max="3">3명</button>
+      <button type="button" data-max="4">4명</button>
+      <button type="button" data-max="5">5명</button>
+      <button type="button" data-max="6">6명</button>
+    </div>
+    <div class="plan" id="plan"></div>
   </section>
 
   <div class="draw-area">
@@ -299,8 +409,22 @@
     { n:24, name:'최정현', g:'남', y:22, dept:'일사' },
     { n:25, name:'홍민하', g:'남', y:22, dept:'일사' },
   ];
-  const GROUP_SIZES = [5, 5, 5, 5, 5];
-  const NUM_GROUPS = GROUP_SIZES.length;
+  const NUM_COLORS = 9;
+  let maxSize = 5;
+  const excluded = new Set();
+  let drawing = false;
+
+  function activeStudents() {
+    return STUDENTS.filter(s => !excluded.has(s.n));
+  }
+
+  // 최대 인원 이하가 되도록 조 개수를 정하고, 인원은 최대한 고르게 나눈다
+  function planSizes(n, max) {
+    if (n === 0) return [];
+    const k = Math.ceil(n / max);
+    const base = Math.floor(n / k), rem = n % k;
+    return Array.from({ length: k }, (_, i) => base + (i < rem ? 1 : 0));
+  }
 
   const rosterGrid = document.getElementById('rosterGrid');
   STUDENTS.forEach(s => {
@@ -308,6 +432,12 @@
     el.className = 'stu';
     el.dataset.n = s.n;
     el.innerHTML = `<div class="num">${s.n}</div><div class="name">${s.name}</div>`;
+    el.addEventListener('click', () => {
+      if (drawing) return;
+      if (excluded.has(s.n)) excluded.delete(s.n); else excluded.add(s.n);
+      el.classList.toggle('excluded', excluded.has(s.n));
+      settingsChanged();
+    });
     rosterGrid.appendChild(el);
   });
 
@@ -320,46 +450,55 @@
     return a;
   }
 
-  function distribute() {
-    const nonIlsa = STUDENTS.filter(s => s.dept !== '일사');
-    const ilsa    = STUDENTS.filter(s => s.dept === '일사');
+  // 조건: 남·여 각 1명 이상, 22·23학번 1명 이상, 비-일사 1명 이상
+  // 조가 많아 다 채울 수 없으면 어긋남이 가장 적은 편성을 고른다
+  function lacks(grp) {
+    return {
+      m:   !grp.some(s => s.g === '남'),
+      f:   !grp.some(s => s.g === '여'),
+      y:   !grp.some(s => s.y !== 24),
+      dep: !grp.some(s => s.dept !== '일사'),
+    };
+  }
+  function violations(groups) {
+    let v = 0;
+    for (const grp of groups) {
+      const l = lacks(grp);
+      v += l.m + l.f + l.y + l.dep;
+    }
+    return v;
+  }
+  function gain(grp, s) {
+    const l = lacks(grp);
+    return (l.m && s.g === '남') + (l.f && s.g === '여') + (l.y && s.y !== 24) + (l.dep && s.dept !== '일사');
+  }
+
+  function distribute(pool, sizes) {
+    const numGroups = sizes.length;
+    let best = null, bestV = Infinity;
 
     for (let attempt = 0; attempt < 4000; attempt++) {
-      const sNon = shuffle(nonIlsa);
-      const sIl  = shuffle(ilsa);
-      const groups = Array.from({ length: NUM_GROUPS }, () => []);
-      const order = shuffle(groups.map((_, i) => i));
-      const seed = Math.min(sNon.length, NUM_GROUPS);
-      for (let i = 0; i < seed; i++) groups[order[i]].push(sNon[i]);
-      for (let i = seed; i < sNon.length; i++) sIl.push(sNon[i]);
+      const order = shuffle(pool.filter(s => s.dept !== '일사'))
+        .concat(shuffle(pool.filter(s => s.dept === '일사')));
+      const groups = Array.from({ length: numGroups }, () => []);
 
-      let ok = true;
-      for (const s of sIl) {
-        const cands = [];
-        for (let g = 0; g < NUM_GROUPS; g++) if (groups[g].length < GROUP_SIZES[g]) cands.push(g);
-        if (cands.length === 0) { ok = false; break; }
-        const pick = cands[Math.floor(Math.random() * cands.length)];
-        groups[pick].push(s);
+      // 자리 남은 조 중 부족한 조건을 가장 많이 채우는 조에 넣는다(동점이면 무작위)
+      for (const s of order) {
+        let top = -1, cands = [];
+        for (let g = 0; g < numGroups; g++) {
+          if (groups[g].length >= sizes[g]) continue;
+          const v = gain(groups[g], s);
+          if (v > top) { top = v; cands = [g]; }
+          else if (v === top) cands.push(g);
+        }
+        groups[cands[Math.floor(Math.random() * cands.length)]].push(s);
       }
-      if (!ok) continue;
 
-      let valid = true;
-      for (const grp of groups) {
-        const males = grp.filter(s => s.g === '남').length;
-        const females = grp.filter(s => s.g === '여').length;
-        const non24 = grp.filter(s => s.y !== 24).length;
-        if (males === 0 || females === 0 || non24 === 0) { valid = false; break; }
-      }
-      if (valid) return groups;
+      const v = violations(groups);
+      if (v < bestV) { best = groups; bestV = v; }
+      if (v === 0) break;
     }
-
-    const all = shuffle(STUDENTS);
-    const groups = Array.from({ length: NUM_GROUPS }, () => []);
-    let idx = 0;
-    for (let g = 0; g < NUM_GROUPS; g++) {
-      for (let k = 0; k < GROUP_SIZES[g]; k++) groups[g].push(all[idx++]);
-    }
-    return groups;
+    return shuffle(best);
   }
 
   const resultsEl = document.getElementById('results');
@@ -367,7 +506,7 @@
     resultsEl.innerHTML = '';
     groups.forEach((grp, i) => {
       const card = document.createElement('div');
-      card.className = `group-card group-${i + 1}`;
+      card.className = `group-card group-${(i % NUM_COLORS) + 1}`;
       const sorted = grp.slice().sort((a, b) => a.n - b.n);
       const membersHtml = sorted.map(s =>
         `<div class="member"><span class="mnum">${s.n}</span>${s.name}</div>`
@@ -382,19 +521,78 @@
       resultsEl.appendChild(card);
       setTimeout(() => card.classList.add('shown'), 100 + i * 90);
     });
+    if (excluded.size) {
+      const note = document.createElement('p');
+      note.className = 'excluded-note';
+      note.textContent = '제외: ' + STUDENTS.filter(s => excluded.has(s.n)).map(s => s.name).join(', ');
+      resultsEl.appendChild(note);
+    }
   }
 
-  const drawBtn = document.getElementById('drawBtn');
-  const ddoogu  = document.getElementById('ddoogu');
+  const drawBtn   = document.getElementById('drawBtn');
+  const ddoogu    = document.getElementById('ddoogu');
+  const subtitle  = document.getElementById('subtitle');
+  const countPill = document.getElementById('countPill');
+  const planEl    = document.getElementById('plan');
+  const resetExcl = document.getElementById('resetExcl');
+  const sizeBtns  = Array.from(document.querySelectorAll('#sizeOpts button'));
+
+  function describePlan(sizes) {
+    const counts = {};
+    sizes.forEach(n => { counts[n] = (counts[n] || 0) + 1; });
+    return Object.keys(counts).sort((a, b) => b - a)
+      .map(n => `${n}명 ${counts[n]}개 조`).join(' · ');
+  }
+
+  function updateHeader() {
+    const n = activeStudents().length;
+    const sizes = planSizes(n, maxSize);
+    countPill.textContent = excluded.size ? `${n}명 · 제외 ${excluded.size}명` : `총 ${n}명`;
+    subtitle.textContent = n ? `${n}명을 ${sizes.length}개 조로 나눕니다` : '편성할 학생이 없습니다';
+    planEl.textContent = n ? `→ ${sizes.length}개 조 (${describePlan(sizes)})` : '';
+    sizeBtns.forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.max === maxSize)));
+    resetExcl.hidden = excluded.size === 0;
+    drawBtn.disabled = n === 0;
+  }
+
+  // 인원·제외가 바뀌면 이전 결과는 맞지 않으므로 지운다
+  function settingsChanged() {
+    resultsEl.innerHTML = '';
+    drawBtn.textContent = '뽑 기';
+    updateHeader();
+  }
+
+  sizeBtns.forEach(b => b.addEventListener('click', () => {
+    if (drawing) return;
+    maxSize = +b.dataset.max;
+    settingsChanged();
+  }));
+
+  resetExcl.addEventListener('click', () => {
+    if (drawing) return;
+    excluded.clear();
+    document.querySelectorAll('.stu.excluded').forEach(el => el.classList.remove('excluded'));
+    settingsChanged();
+  });
+
+  function setDrawing(on) {
+    drawing = on;
+    rosterGrid.classList.toggle('locked', on);
+    sizeBtns.forEach(b => { b.disabled = on; });
+    resetExcl.disabled = on;
+  }
 
   drawBtn.addEventListener('click', () => {
+    const pool = activeStudents();
+    if (!pool.length) return;
+    setDrawing(true);
     drawBtn.disabled = true;
     drawBtn.textContent = '뽑는 중';
     ddoogu.classList.add('show');
 
-    const stuEls = Array.from(document.querySelectorAll('.stu'));
+    const stuEls = Array.from(document.querySelectorAll('.stu:not(.excluded)'));
     stuEls.forEach(el => el.classList.add('shaking'));
-    const namePool = STUDENTS.map(s => s.name);
+    const namePool = pool.map(s => s.name);
     const nameTimer = setInterval(() => {
       stuEls.forEach(el => {
         const r = namePool[Math.floor(Math.random() * namePool.length)];
@@ -414,13 +612,16 @@
       });
       ddoogu.classList.remove('show');
 
-      const groups = distribute();
+      const groups = distribute(pool, planSizes(pool.length, maxSize));
       renderResults(groups);
 
+      setDrawing(false);
       drawBtn.disabled = false;
       drawBtn.textContent = '다시 뽑기';
     }, 2200);
   });
+
+  updateHeader();
 </script>
 </body>
 </html>
