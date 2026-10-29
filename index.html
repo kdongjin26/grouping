@@ -371,13 +371,11 @@
   </section>
 
   <section class="settings">
-    <span class="label">조별 최대 인원</span>
-    <div class="size-opts" id="sizeOpts" role="group" aria-label="조별 최대 인원">
-      <button type="button" data-max="3">3명</button>
-      <button type="button" data-max="4">4명</button>
-      <button type="button" data-max="5">5명</button>
-      <button type="button" data-max="6">6명</button>
+    <div class="size-opts" id="modeOpts" role="group" aria-label="나누는 기준">
+      <button type="button" data-mode="max">조별 최대 인원</button>
+      <button type="button" data-mode="count">조 개수</button>
     </div>
+    <div class="size-opts" id="sizeOpts" role="group" aria-label="조별 최대 인원"></div>
     <div class="plan" id="plan"></div>
   </section>
 
@@ -451,7 +449,10 @@
   let classKey = CLASSES[location.hash.slice(1)] ? location.hash.slice(1) : '3';
   let STUDENTS = CLASSES[classKey].students;
   let YOUNG = CLASSES[classKey].young;
+  let mode = 'max';        // 'max' 조별 최대 인원 / 'count' 조 개수
   let maxSize = 5;
+  let groupCount = 5;
+  const MODE_OPTS = { max: [3, 4, 5, 6], count: [3, 4, 5, 6, 7, 8, 9] };
   const excluded = new Set();
   let drawing = false;
 
@@ -460,9 +461,10 @@
   }
 
   // 최대 인원 이하가 되도록 조 개수를 정하고, 인원은 최대한 고르게 나눈다
-  function planSizes(n, max) {
+  // 조 개수 모드면 고른 개수 그대로(인원보다 많으면 인원 수까지) 나눈다
+  function planSizes(n) {
     if (n === 0) return [];
-    const k = Math.ceil(n / max);
+    const k = mode === 'count' ? Math.min(groupCount, n) : Math.ceil(n / maxSize);
     const base = Math.floor(n / k), rem = n % k;
     return Array.from({ length: k }, (_, i) => base + (i < rem ? 1 : 0));
   }
@@ -580,7 +582,9 @@
   const countPill = document.getElementById('countPill');
   const planEl    = document.getElementById('plan');
   const resetExcl = document.getElementById('resetExcl');
-  const sizeBtns  = Array.from(document.querySelectorAll('#sizeOpts button'));
+  const sizeOpts  = document.getElementById('sizeOpts');
+  const modeBtns  = Array.from(document.querySelectorAll('#modeOpts button'));
+  let sizeBtns    = [];
   const classBtns = Array.from(document.querySelectorAll('#classOpts button'));
 
   function describePlan(sizes) {
@@ -592,12 +596,14 @@
 
   function updateHeader() {
     const n = activeStudents().length;
-    const sizes = planSizes(n, maxSize);
+    const sizes = planSizes(n);
     countPill.textContent = excluded.size ? `${n}명 · 제외 ${excluded.size}명` : `총 ${n}명`;
     subtitle.textContent = n ? `${classKey}학년 ${n}명을 ${sizes.length}개 조로 나눕니다` : '편성할 학생이 없습니다';
     classBtns.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.class === classKey)));
     planEl.textContent = n ? `→ ${sizes.length}개 조 (${describePlan(sizes)})` : '';
-    sizeBtns.forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.max === maxSize)));
+    const cur = mode === 'count' ? groupCount : maxSize;
+    modeBtns.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.mode === mode)));
+    sizeBtns.forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.v === cur)));
     resetExcl.hidden = excluded.size === 0;
     drawBtn.disabled = n === 0;
   }
@@ -609,9 +615,30 @@
     updateHeader();
   }
 
-  sizeBtns.forEach(b => b.addEventListener('click', () => {
-    if (drawing) return;
-    maxSize = +b.dataset.max;
+  // 기준(최대 인원 / 조 개수)에 맞는 선택 버튼을 다시 그린다
+  function renderSizeOpts() {
+    const unit = mode === 'count' ? '개 조' : '명';
+    sizeOpts.setAttribute('aria-label', mode === 'count' ? '조 개수' : '조별 최대 인원');
+    sizeOpts.innerHTML = '';
+    sizeBtns = MODE_OPTS[mode].map(v => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.dataset.v = v;
+      b.textContent = v + unit;
+      b.addEventListener('click', () => {
+        if (drawing) return;
+        if (mode === 'count') groupCount = v; else maxSize = v;
+        settingsChanged();
+      });
+      sizeOpts.appendChild(b);
+      return b;
+    });
+  }
+
+  modeBtns.forEach(b => b.addEventListener('click', () => {
+    if (drawing || b.dataset.mode === mode) return;
+    mode = b.dataset.mode;
+    renderSizeOpts();
     settingsChanged();
   }));
 
@@ -638,6 +665,7 @@
     drawing = on;
     rosterGrid.classList.toggle('locked', on);
     sizeBtns.forEach(b => { b.disabled = on; });
+    modeBtns.forEach(b => { b.disabled = on; });
     classBtns.forEach(b => { b.disabled = on; });
     resetExcl.disabled = on;
   }
@@ -672,7 +700,7 @@
       });
       ddoogu.classList.remove('show');
 
-      const groups = distribute(pool, planSizes(pool.length, maxSize));
+      const groups = distribute(pool, planSizes(pool.length));
       renderResults(groups);
 
       setDrawing(false);
@@ -681,6 +709,7 @@
     }, 2200);
   });
 
+  renderSizeOpts();
   updateHeader();
 </script>
 </body>
